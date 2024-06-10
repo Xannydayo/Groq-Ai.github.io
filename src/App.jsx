@@ -13,7 +13,7 @@ function App() {
     setData(ai)
   }
   return(
-    <main className='flex flex-col min-h-[80vh] justify-center items-center'>
+    <main className='flex flex-col min-h-[80vh] justify-center items-center w-full max-w-xl mx-auto'>
           <h1 className='text-4xl text-center text-indigo-500'>XANNY|GROQ AI</h1>
         <form className=' w-full flex flex-col gap-4 py-4'>
           <input
@@ -28,9 +28,12 @@ function App() {
           type='button'
           className='bg-blue-500 text-white py-2 px-4 font-bold rounded-md'>Kirim Cuy</button>
         </form>
-        <SyntaxHighlighter language='swift' style={darcula}>
+        <div className='max-w-xl'>
+          <SyntaxHighlighter language='swift' style={darcula} wrapLongLines>
           {data.toString()}
         </SyntaxHighlighter>
+        </div>
+        
     </main> 
 
   )
