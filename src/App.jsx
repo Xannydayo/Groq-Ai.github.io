@@ -7,9 +7,9 @@ import { darcula } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 function App() {
   const [data, setData] = useState("")
+  const [content, setContent] = useState("") // add this line
   const handleSubmit = async () => {
-    // eslint-disable-next-line no-undef
-    const ai = await requestToGroqAi(content.value)
+    const ai = await requestToGroqAi(content)
     setData(ai)
   }
   return(
@@ -19,7 +19,8 @@ function App() {
           <input
           placeholder='ketik pertanyaanmu ...'
           className='border-2 border-gray-300 rounded-md p-2' 
-          id="content"
+          value={content} // add this line
+          onChange={(e) => setContent(e.target.value)} // add this line
           type='text'
            ></input>
           <button 
@@ -28,7 +29,7 @@ function App() {
           className='bg-blue-500 text-white py-2 px-4 font-bold rounded-md'>Kirim Cuy</button>
         </form>
         <SyntaxHighlighter language='swift' style={darcula}>
-          {data.toString}
+          {data.toString()}
         </SyntaxHighlighter>
     </main> 
 
