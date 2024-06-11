@@ -1,3 +1,5 @@
+all API key from https://console.groq.com/keys
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
