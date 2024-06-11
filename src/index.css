@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.loadss {
+    width: 100px;
+    height: 100px;
+    display: grid;
+  }
+  .loadss::before,
+  .loadss::after {
+    content: '';
+    grid-area: 1/1;
+    --c: radial-gradient(farthest-side, #766df4 92%, #0000);
+    background: var(--c) 50% 0, var(--c) 50% 100%, var(--c) 100% 50%, var(--c) 0 50%;
+    background-size: 24px 24px;
+    background-repeat: no-repeat;
+    animation: s2 0.5s infinite;
+  }
+  .loadss::before {
+    margin: 8px;
+    filter: hue-rotate(45deg);
+    background-size: 16px 16px;
+    animation-timing-function: linear;
+  }

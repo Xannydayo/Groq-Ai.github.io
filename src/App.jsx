@@ -7,7 +7,7 @@ import { darcula } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 function App() {
   const [data, setData] = useState("")
-  const [content, setContent] = useState("") // add this line
+  const [content, setContent] = useState("")
   const handleSubmit = async () => {
     const ai = await requestToGroqAi(content)
     setData(ai)
@@ -19,8 +19,8 @@ function App() {
           <input
           placeholder='ketik pertanyaanmu ...'
           className='border-2 border-gray-300 rounded-md p-2' 
-          value={content} // add this line
-          onChange={(e) => setContent(e.target.value)} // add this line
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
           type='text'
            ></input>
           <button 
@@ -28,17 +28,15 @@ function App() {
           type='button'
           className='bg-blue-500 text-white py-2 px-4 font-bold rounded-md'>Kirim Cuy</button>
         </form>
-        <div className='max-w-xl'>
+        <div className='max-w-xl w-full mx-auto'>
           <SyntaxHighlighter language='swift' style={darcula} wrapLongLines>
           {data.toString()}
         </SyntaxHighlighter>
         </div>
         
     </main> 
-
-  )
-
-}
+  );
+};
 
 export default App
 
