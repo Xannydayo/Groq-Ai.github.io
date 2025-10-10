@@ -21,7 +21,7 @@ export const requestToGroqAi = async (content) => {
     return reply.choices[0].message.content;
   } catch (error) {
     console.error('Groq API Error:', error);
-    // Fallback to alternative model if the primary one fails
+
     try {
       const reply = await groq.chat.completions.create({
         messages: [

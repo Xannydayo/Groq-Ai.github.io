@@ -2,24 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile browser safe area support */
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Ensure fixed elements respect safe areas */
+.fixed-input-bar {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
 .loadss {
-    width: 100px;
-    height: 100px;
-    display: grid;
-  }
-  .loadss::before,
-  .loadss::after {
-    content: '';
-    grid-area: 1/1;
-    --c: radial-gradient(farthest-side, #766df4 92%, #0000);
-    background: var(--c) 50% 0, var(--c) 50% 100%, var(--c) 100% 50%, var(--c) 0 50%;
-    background-size: 24px 24px;
-    background-repeat: no-repeat;
-    animation: s2 0.5s infinite;
-  }
-  .loadss::before {
-    margin: 8px;
-    filter: hue-rotate(45deg);
-    background-size: 16px 16px;
-    animation-timing-function: linear;
-  }
+  width: 100px;
+  height: 100px;
+  display: grid;
+}
+.loadss::before,
+.loadss::after {
+  content: '';
+  grid-area: 1/1;
+  --c: radial-gradient(farthest-side, #766df4 92%, #0000);
+  background: var(--c) 50% 0, var(--c) 50% 100%, var(--c) 100% 50%, var(--c) 0 50%;
+  background-size: 24px 24px;
+  background-repeat: no-repeat;
+  animation: s2 0.5s infinite;
+}
+.loadss::before {
+  margin: 8px;
+  filter: hue-rotate(45deg);
+  background-size: 16px 16px;
+  animation-timing-function: linear;
+}

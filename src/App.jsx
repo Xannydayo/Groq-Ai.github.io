@@ -163,12 +163,12 @@ function App() {
       </header>
 
       {/* Main Chat Container */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 sm:pb-28">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-32 sm:pb-28">
         {/* Chat History */}
         <div className="relative mb-4 sm:mb-6">
           <div
             ref={chatContainerRef}
-            className="space-y-3 sm:space-y-4 max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-180px)] overflow-y-auto pr-1 sm:pr-2"
+            className="space-y-3 sm:space-y-4 max-h-[calc(100dvh-220px)] sm:max-h-[calc(100vh-180px)] overflow-y-auto pr-1 sm:pr-2"
           >
             {chatHistory.length === 0 ? (
               <div className="text-center py-8 sm:py-12">
@@ -296,7 +296,7 @@ function App() {
       </main>
 
       {/* Fixed Input Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/50 p-4 z-50 fixed-input-bar">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-50 fixed-input-bar">
         <div className="max-w-4xl mx-auto">
           <form
             onSubmit={(e) => {
