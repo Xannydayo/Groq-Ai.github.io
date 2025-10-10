@@ -163,12 +163,12 @@ function App() {
       </header>
 
       {/* Main Chat Container */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 sm:pb-28">
         {/* Chat History */}
         <div className="relative mb-4 sm:mb-6">
           <div
             ref={chatContainerRef}
-            className="space-y-3 sm:space-y-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-1 sm:pr-2"
+            className="space-y-3 sm:space-y-4 max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-180px)] overflow-y-auto pr-1 sm:pr-2"
           >
             {chatHistory.length === 0 ? (
               <div className="text-center py-8 sm:py-12">
@@ -248,7 +248,7 @@ function App() {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="scroll-button absolute bottom-4 right-4 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 z-10 border border-gray-600/50"
+              className="scroll-button absolute bottom-20 sm:bottom-16 right-4 bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 z-10 border border-gray-600/50"
               title="Scroll to bottom"
             >
               <svg
@@ -266,44 +266,6 @@ function App() {
               </svg>
             </button>
           )}
-        </div>
-
-        {/* Input Form */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-3 sm:p-4 shadow-xl">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            className="flex flex-col sm:flex-row gap-3"
-          >
-            <input
-              ref={inputRef}
-              placeholder="Type your question here..."
-              className="flex-1 bg-gray-700/70 border border-gray-600/50 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all text-sm sm:text-base"
-              value={content}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !content.trim()}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base w-full sm:w-auto"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Loading...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <span>Send</span>
-                  <span>🚀</span>
-                </div>
-              )}
-            </button>
-          </form>
         </div>
 
         {/* Current Response Display (for backward compatibility) */}
@@ -332,6 +294,46 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Fixed Input Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700/50 p-4 z-50 fixed-input-bar">
+        <div className="max-w-4xl mx-auto">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
+            <input
+              ref={inputRef}
+              placeholder="Type your question here..."
+              className="flex-1 bg-gray-700/70 border border-gray-600/50 rounded-xl px-3 sm:px-4 py-3 sm:py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all text-sm sm:text-base"
+              value={content}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => setContent(e.target.value)}
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !content.trim()}
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base w-full sm:w-auto"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Loading...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <span>Send</span>
+                  <span>🚀</span>
+                </div>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

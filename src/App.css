@@ -158,6 +158,16 @@ button:focus {
   input:focus {
     transform: none;
   }
+
+  /* Fixed input bar mobile optimization */
+  .fixed-input-bar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Fixed input bar styles */
+.fixed-input-bar {
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Scroll to bottom button animation */
