@@ -151,7 +151,7 @@ function App() {
                       style={{ animationDelay: '0.2s' }}
                     ></div>
                   </div>
-                  <span className="text-gray-300 text-sm ml-2">Thinking...</span>
+                  <span className="text-gray-300 text-sm ml-2">sedang berfikir keras...</span>
                 </div>
               </div>
             </div>
