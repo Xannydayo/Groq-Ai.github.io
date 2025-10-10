@@ -35,7 +35,7 @@ export const requestToGroqAi = async (content) => {
       return reply.choices[0].message.content;
     } catch (fallbackError) {
       console.error('Fallback model also failed:', fallbackError);
-      throw new Error('All Groq models are currently unavailable. Please try again later.');
+      throw new Error('Maaf ya lagi dimatiin sama yang bikin :3. Will available in short time');
     }
   }
 };

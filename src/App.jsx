@@ -16,13 +16,12 @@ function App() {
     const keyword = searchRef.current.value;
     if (keyword.trim() === '') return;
     event.preventDefault();
-    // router.push(`/search/${keyword}`) // Commented out since router is not imported
   };
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
-      event.preventDefault(); // Menghentikan default behavior dari tombol "Enter"
-      handleSubmit(); // Memanggil fungsi handleSubmit
+      event.preventDefault(); 
+      handleSubmit(); 
     }
   };
 
