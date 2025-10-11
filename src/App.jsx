@@ -174,7 +174,7 @@ function App() {
               <div className="text-center py-8 sm:py-12">
                 <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">💬</div>
                 <h2 className="text-lg sm:text-xl text-gray-300 mb-2">Welcome to XANNY AI!</h2>
-                <p className="text-sm sm:text-base text-gray-400">Start a conversation by typing your question below</p>
+                <p className="text-sm sm:text-base text-gray-400">Start a conversation by typing your question below!</p>
               </div>
             ) : (
               chatHistory.map((chat) => (
