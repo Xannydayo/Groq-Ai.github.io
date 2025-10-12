@@ -433,7 +433,7 @@ function App() {
                   <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-sm sm:text-lg font-bold">X</span>
                   </div>
-                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent gradient-text leading-tight">XAN AI</h1>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent gradient-text leading-tight">XanAI</h1>
                 </div>
               </div>
 
