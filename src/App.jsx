@@ -22,6 +22,9 @@ function App() {
   const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant'); // Default to Xanny
   const [showClearModal, setShowClearModal] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Chat management
   const [chats, setChats] = useState([]);
@@ -137,7 +140,13 @@ function App() {
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() || isLoading) return;
+    if ((!content.trim() && uploadedFiles.length === 0) || isLoading) return;
+
+    // Check if user has uploaded files but is not using Xanny Pro
+    if (uploadedFiles.length > 0 && selectedModel !== 'llama-3.3-70b-versatile') {
+      setShowProModal(true);
+      return;
+    }
 
     // Check if using Xanny Pro and limit reached
     let actualModel = selectedModel;
@@ -148,7 +157,28 @@ function App() {
 
     try {
       setIsLoading(true);
-      const userMessage = content;
+
+      // Prepare the message content
+      let userMessage = content;
+
+      // If there are uploaded files, analyze them
+      if (uploadedFiles.length > 0) {
+        const fileAnalyses = [];
+        for (const file of uploadedFiles) {
+          const analysis = await analyzeFile(file);
+          fileAnalyses.push(analysis);
+        }
+
+        if (userMessage.trim()) {
+          userMessage = `${userMessage}\n\n${fileAnalyses.join('\n\n')}`;
+        } else {
+          userMessage = fileAnalyses.join('\n\n');
+        }
+
+        // Clear uploaded files after analysis
+        setUploadedFiles([]);
+      }
+
       const modelInfo = getModelInfo(actualModel);
 
       // Create new chat if none exists
@@ -211,6 +241,80 @@ function App() {
 
   const handleCancelClear = () => {
     setShowClearModal(false);
+  };
+
+  // File upload and analysis functions
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Check if user is using Xanny Pro
+    if (selectedModel !== 'llama-3.3-70b-versatile') {
+      setShowProModal(true);
+      event.target.value = '';
+      return;
+    }
+
+    setIsUploading(true);
+    const newFiles = [];
+
+    for (const file of files) {
+      try {
+        const fileData = await readFileAsDataURL(file);
+        newFiles.push({
+          id: Date.now() + Math.random(),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: fileData,
+          uploadedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('Error reading file:', error);
+      }
+    }
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    setIsUploading(false);
+
+    // Clear the input
+    event.target.value = '';
+  };
+
+  const readFileAsDataURL = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeFile = (fileId) => {
+    setUploadedFiles((prev) => prev.filter((file) => file.id !== fileId));
+  };
+
+  const analyzeFile = async (file) => {
+    try {
+      let prompt = '';
+
+      if (file.type.startsWith('image/')) {
+        prompt = `Please analyze this image and describe what you see in detail. Include any text, objects, colors, composition, and any other relevant information.`;
+      } else if (file.type === 'application/pdf') {
+        prompt = `Please analyze this PDF document and provide a summary of its contents.`;
+      } else if (file.type === 'text/plain') {
+        prompt = `Please analyze this text document and provide a summary of its contents.`;
+      } else {
+        prompt = `Please analyze this file and provide information about its contents.`;
+      }
+
+      // Add file information to the message
+      const fileInfo = `\n\n[File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      return prompt + fileInfo;
+    } catch (error) {
+      console.error('Error analyzing file:', error);
+      return `Error analyzing file: ${error.message}`;
+    }
   };
 
   // Xanny Pro usage tracking
@@ -497,6 +601,63 @@ function App() {
         {/* Input Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-xl border-t border-white/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-50">
           <div className="max-w-4xl mx-auto">
+            {/* File Upload Preview */}
+            {uploadedFiles.length > 0 && (
+              <div className="mb-3 max-h-32 overflow-y-auto">
+                <div className="flex flex-wrap gap-2">
+                  {uploadedFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                    >
+                      {file.type.startsWith('image/') ? (
+                        <img
+                          src={file.data}
+                          alt={file.name}
+                          className="w-6 h-6 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                      <span className="text-gray-300 text-xs truncate max-w-24">{file.name}</span>
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="text-red-400 hover:text-red-300 ml-1"
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -504,10 +665,59 @@ function App() {
               }}
               className="flex gap-3"
             >
+              {/* File Upload Button */}
+              <div className="relative">
+                <input
+                  type="file"
+                  id="file-upload"
+                  multiple
+                  accept="image/*,.pdf,.txt,.doc,.docx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={isLoading || isUploading}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className={`flex items-center justify-center w-12 h-12 rounded-2xl border border-white/10 cursor-pointer transition-all duration-300 relative ${
+                    isUploading
+                      ? 'bg-blue-500/20 border-blue-400/50'
+                      : selectedModel === 'llama-3.3-70b-versatile'
+                      ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-400/50 hover:border-yellow-400/70'
+                      : 'bg-white/5 hover:bg-white/10 hover:border-white/20'
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={selectedModel !== 'llama-3.3-70b-versatile' ? 'File analysis available only with Xanny Pro' : 'Upload files to analyze'}
+                >
+                  {isUploading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <svg
+                        className={`w-5 h-5 ${selectedModel === 'llama-3.3-70b-versatile' ? 'text-yellow-400' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                        />
+                      </svg>
+                      {selectedModel !== 'llama-3.3-70b-versatile' && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                          <span className="text-black text-xs font-bold">👑</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </label>
+              </div>
+
               <div className="flex-1 relative">
                 <input
                   ref={inputRef}
-                  placeholder="Ask XAN AI anything..."
+                  placeholder={selectedModel === 'llama-3.3-70b-versatile' ? 'Ask XAN AI anything or upload files to analyze...' : 'Ask XAN AI anything... (File analysis available with Xanny Pro 👑)'}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all duration-300 backdrop-blur-sm"
                   value={content}
                   onKeyDown={handleKeyDown}
@@ -517,8 +727,12 @@ function App() {
               </div>
               <button
                 type="submit"
-                disabled={isLoading || !content.trim()}
-                className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-medium hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 border border-white/20"
+                disabled={isLoading || (!content.trim() && uploadedFiles.length === 0)}
+                className={`px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-medium transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 border border-white/20 ${
+                  uploadedFiles.length > 0 && selectedModel !== 'llama-3.3-70b-versatile'
+                    ? 'bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 hover:from-yellow-700 hover:via-orange-700 hover:to-red-700 text-white'
+                    : 'bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 text-white'
+                } ${isLoading || (!content.trim() && uploadedFiles.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-1 sm:gap-2">
@@ -527,20 +741,29 @@ function App() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="hidden sm:inline text-sm">Send</span>
-                    <svg
-                      className="w-4 h-4 sm:w-5 sm:h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
+                    {uploadedFiles.length > 0 && selectedModel !== 'llama-3.3-70b-versatile' ? (
+                      <>
+                        <span className="hidden sm:inline text-sm">Upgrade to Pro</span>
+                        <span className="text-sm">👑</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden sm:inline text-sm">Send</span>
+                        <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                          />
+                        </svg>
+                      </>
+                    )}
                   </div>
                 )}
               </button>
@@ -645,6 +868,57 @@ function App() {
                 className="flex-1 px-4 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl font-medium transition-all duration-200 border border-blue-500/30 hover:border-blue-400/50"
               >
                 Switch to Xanny
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Xanny Pro Feature Modal */}
+      {showProModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-full flex items-center justify-center">
+                <span className="text-2xl">👑</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Xanny Pro Feature</h3>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-300 mb-3 leading-relaxed">
+                <span className="text-yellow-400 font-semibold">File & Photo Analysis</span> is a premium feature available only with <span className="text-yellow-400 font-semibold">Xanny Pro</span>.
+              </p>
+              <p className="text-gray-400 text-sm mb-3">Upload and analyze images, PDFs, text documents, and more with our advanced AI capabilities.</p>
+            </div>
+
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl p-3 mb-4 border border-yellow-500/20">
+              <p className="text-gray-300 text-sm">
+                <span className="text-yellow-400">👑 Xanny Pro</span> provides advanced file analysis including:
+              </p>
+              <ul className="text-gray-400 text-xs mt-2 ml-4 space-y-1">
+                <li>• Image recognition and description</li>
+                <li>• PDF document analysis</li>
+                <li>• Text file processing</li>
+                <li>• Advanced AI responses</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowProModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50"
+              >
+                Maybe Later
+              </button>
+              <button
+                onClick={() => {
+                  setShowProModal(false);
+                  setSelectedModel('llama-3.3-70b-versatile');
+                }}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 text-yellow-300 rounded-xl font-medium transition-all duration-200 border border-yellow-500/30 hover:border-yellow-400/50"
+              >
+                Upgrade to Pro
               </button>
             </div>
           </div>
