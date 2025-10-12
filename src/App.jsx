@@ -19,7 +19,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
+  const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant'); // Default to Xanny
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   // Chat management
   const [chats, setChats] = useState([]);
@@ -87,7 +89,13 @@ function App() {
   };
 
   const createNewChat = () => {
-    const newChat = chatStorage.createNewChat('New Chat', selectedModel);
+    // Use the actual model that will be used (considering limits)
+    let actualModel = selectedModel;
+    if (selectedModel === 'llama-3.3-70b-versatile' && checkXannyProLimit()) {
+      actualModel = 'llama-3.1-8b-instant'; // Fallback to Xanny
+    }
+
+    const newChat = chatStorage.createNewChat('New Chat', actualModel);
     setChats((prev) => [newChat, ...prev]);
     setCurrentChatId(newChat.id);
     return newChat;
@@ -131,20 +139,32 @@ function App() {
   const handleSubmit = async () => {
     if (!content.trim() || isLoading) return;
 
+    // Check if using Xanny Pro and limit reached
+    let actualModel = selectedModel;
+    if (selectedModel === 'llama-3.3-70b-versatile' && checkXannyProLimit()) {
+      actualModel = 'llama-3.1-8b-instant'; // Fallback to Xanny
+      setSelectedModel('llama-3.1-8b-instant');
+    }
+
     try {
       setIsLoading(true);
       const userMessage = content;
-      const modelInfo = getModelInfo(selectedModel);
+      const modelInfo = getModelInfo(actualModel);
 
       // Create new chat if none exists
       if (!currentChatId) {
         createNewChat();
       }
 
-      const aiResponse = await aiService.getResponse(userMessage, selectedModel);
+      const aiResponse = await aiService.getResponse(userMessage, actualModel);
 
-      // Add message to current chat
-      const updatedChat = chatStorage.addMessage(currentChatId, userMessage, aiResponse, selectedModel);
+      // Increment Xanny Pro usage if using Pro
+      if (actualModel === 'llama-3.3-70b-versatile') {
+        incrementXannyProUsage();
+      }
+
+      // Add message to current chat with the actual model used
+      const updatedChat = chatStorage.addMessage(currentChatId, userMessage, aiResponse, actualModel);
 
       setCurrentChat(updatedChat);
       loadChats();
@@ -159,8 +179,8 @@ function App() {
     } catch (error) {
       console.error('Error:', error);
 
-      // Add error message to chat
-      const errorChat = chatStorage.addMessage(currentChatId, content, `Error: ${error.message}`, selectedModel);
+      // Add error message to chat with the actual model used
+      const errorChat = chatStorage.addMessage(currentChatId, content, `Error: ${error.message}`, actualModel);
 
       setCurrentChat(errorChat);
       loadChats();
@@ -176,14 +196,47 @@ function App() {
   };
 
   const clearCurrentChat = () => {
+    setShowClearModal(true);
+  };
+
+  const handleConfirmClear = () => {
     if (currentChat && currentChat.messages.length > 0) {
-      if (confirm('Clear all messages in this chat?')) {
-        const clearedChat = { ...currentChat, messages: [] };
-        chatStorage.saveChat(clearedChat);
-        setCurrentChat(clearedChat);
-        loadChats();
-      }
+      const clearedChat = { ...currentChat, messages: [] };
+      chatStorage.saveChat(clearedChat);
+      setCurrentChat(clearedChat);
+      loadChats();
     }
+    setShowClearModal(false);
+  };
+
+  const handleCancelClear = () => {
+    setShowClearModal(false);
+  };
+
+  // Xanny Pro usage tracking
+  const getXannyProUsage = () => {
+    const today = new Date().toDateString();
+    const usage = localStorage.getItem(`xanny_pro_usage_${today}`);
+    return usage ? parseInt(usage) : 0;
+  };
+
+  const incrementXannyProUsage = () => {
+    const today = new Date().toDateString();
+    const currentUsage = getXannyProUsage();
+    localStorage.setItem(`xanny_pro_usage_${today}`, (currentUsage + 1).toString());
+  };
+
+  const checkXannyProLimit = () => {
+    const usage = getXannyProUsage();
+    return usage >= 20;
+  };
+
+  const handleModelChange = (newModel) => {
+    if (newModel === 'llama-3.3-70b-versatile' && checkXannyProLimit()) {
+      setShowLimitModal(true);
+      return;
+    }
+    setSelectedModel(newModel);
   };
 
   const getModelIcon = (modelId) => {
@@ -192,10 +245,29 @@ function App() {
 
     switch (model.provider) {
       case 'Groq':
+        if (modelId === 'llama-3.3-70b-versatile') {
+          return '👑'; // Crown icon for Xanny Pro
+        }
         return '⚡';
       default:
         return '🔮';
     }
+  };
+
+  const getModelDisplayName = (modelId) => {
+    const model = getModelInfo(modelId);
+    if (!model) return 'Unknown Model';
+
+    if (modelId === 'llama-3.3-70b-versatile') {
+      return (
+        <span className="flex items-center gap-1">
+          <span className="text-yellow-400">👑</span>
+          <span>Xanny Pro</span>
+          <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+        </span>
+      );
+    }
+    return model.name;
   };
 
   return (
@@ -216,8 +288,8 @@ function App() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40">
-          <div className="px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -253,27 +325,28 @@ function App() {
                     </svg>
                   )}
                 </button>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-lg font-bold">X</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm sm:text-lg font-bold">X</span>
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent gradient-text">XANNY AI</h1>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent gradient-text leading-tight">XAN AI</h1>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <ModelSelector
                   selectedModel={selectedModel}
-                  onModelChange={setSelectedModel}
+                  onModelChange={handleModelChange}
                   disabled={isLoading}
                 />
 
                 {currentChat?.messages?.length > 0 && (
                   <button
                     onClick={clearCurrentChat}
-                    className="px-3 py-1.5 text-sm bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 transition-all duration-200 border border-red-500/30 hover:border-red-400/50 hover:scale-105"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 transition-all duration-200 border border-red-500/30 hover:border-red-400/50 hover:scale-105"
                   >
-                    Clear Chat
+                    <span className="hidden sm:inline">Clear Chat</span>
+                    <span className="sm:hidden">Clear</span>
                   </button>
                 )}
               </div>
@@ -297,11 +370,21 @@ function App() {
                     </div>
                     <div className="absolute inset-0 w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-30"></div>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent mb-3">Welcome to XANNY AI!</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent mb-3">Welcome to XAN AI!</h2>
                   <p className="text-gray-400 mb-6 text-lg max-w-md mx-auto">Your intelligent AI assistant is ready to help. Start a conversation by typing your question below!</p>
                   <div className="flex items-center justify-center gap-3 text-sm bg-white/5 rounded-xl px-4 py-2 mx-auto w-fit border border-white/10">
                     <span className="text-lg">{getModelIcon(selectedModel)}</span>
-                    <span className="text-gray-300">Using {getModelInfo(selectedModel)?.name}</span>
+                    <span className="text-gray-300">
+                      {selectedModel === 'llama-3.3-70b-versatile' ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-yellow-400">👑</span>
+                          <span>Xanny Pro</span>
+                          <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                        </span>
+                      ) : (
+                        getModelInfo(selectedModel)?.name
+                      )}
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -341,7 +424,17 @@ function App() {
                               {typeof message.ai === 'string' ? message.ai : JSON.stringify(message.ai, null, 2)}
                             </SyntaxHighlighter>
                             <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/10">
-                              <p className="text-gray-400 text-xs font-medium">{getModelInfo(message.modelId)?.name}</p>
+                              <p className="text-gray-400 text-xs font-medium">
+                                {message.modelId === 'llama-3.3-70b-versatile' ? (
+                                  <span className="flex items-center gap-1">
+                                    <span className="text-yellow-400">👑</span>
+                                    <span>Xanny Pro</span>
+                                    <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-1 py-0.5 rounded-full font-bold">PRO</span>
+                                  </span>
+                                ) : (
+                                  getModelInfo(message.modelId)?.name
+                                )}
+                              </p>
                               <p className="text-gray-500 text-xs">{message.timestamp}</p>
                             </div>
                           </div>
@@ -414,7 +507,7 @@ function App() {
               <div className="flex-1 relative">
                 <input
                   ref={inputRef}
-                  placeholder="Ask XANNY AI anything..."
+                  placeholder="Ask XAN AI anything..."
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all duration-300 backdrop-blur-sm"
                   value={content}
                   onKeyDown={handleKeyDown}
@@ -425,18 +518,18 @@ function App() {
               <button
                 type="submit"
                 disabled={isLoading || !content.trim()}
-                className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 text-white px-6 py-3 rounded-2xl font-medium hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 border border-white/20"
+                className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-medium hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 border border-white/20"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="hidden sm:inline">Loading...</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="hidden sm:inline text-sm">Loading...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="hidden sm:inline">Send</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="hidden sm:inline text-sm">Send</span>
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4 sm:w-5 sm:h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -455,6 +548,108 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Clear Chat Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Clear Chat</h3>
+            </div>
+
+            <p className="text-gray-300 mb-6 leading-relaxed">Are you sure you want to clear all messages in this chat? This action cannot be undone.</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelClear}
+                className="flex-1 px-4 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmClear}
+                className="flex-1 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-xl font-medium transition-all duration-200 border border-red-500/30 hover:border-red-400/50"
+              >
+                Clear Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Xanny Pro Limit Modal */}
+      {showLimitModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-yellow-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Xanny Pro Limit Reached</h3>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-300 mb-3 leading-relaxed">
+                You've reached the daily limit of <span className="text-yellow-400 font-semibold">20 responses</span> for Xanny Pro today.
+              </p>
+              <p className="text-gray-400 text-sm">
+                Your usage: <span className="text-yellow-400 font-semibold">{getXannyProUsage()}/20</span> responses
+              </p>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 mb-4">
+              <p className="text-gray-300 text-sm">
+                <span className="text-yellow-400">👑 Xanny Pro</span> will be available again tomorrow, or you can continue with <span className="text-blue-400">⚡ Xanny</span> for unlimited usage.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50"
+              >
+                Continue with Xanny
+              </button>
+              <button
+                onClick={() => {
+                  setShowLimitModal(false);
+                  setSelectedModel('llama-3.1-8b-instant');
+                }}
+                className="flex-1 px-4 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl font-medium transition-all duration-200 border border-blue-500/30 hover:border-blue-400/50"
+              >
+                Switch to Xanny
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

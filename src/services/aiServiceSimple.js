@@ -21,7 +21,7 @@ export const getAllModels = () => {
 
   // Add Groq models if available
   if (groq) {
-    models.push({ id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', provider: 'Groq' }, { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', provider: 'Groq' });
+    models.push({ id: 'llama-3.3-70b-versatile', name: 'Xanny Pro', provider: 'Groq' }, { id: 'llama-3.1-8b-instant', name: 'Xanny', provider: 'Groq' });
   }
 
   return models;

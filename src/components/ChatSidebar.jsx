@@ -6,6 +6,8 @@ const ChatSidebar = ({ isOpen, onToggle, chats, currentChatId, onChatSelect, onN
   const [editingChatId, setEditingChatId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [showImportExport, setShowImportExport] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState(null);
 
   const handleEditStart = (chat) => {
     setEditingChatId(chat.id);
@@ -45,16 +47,66 @@ const ChatSidebar = ({ isOpen, onToggle, chats, currentChatId, onChatSelect, onN
     }
   };
 
+  const handleDeleteClick = (chat) => {
+    setChatToDelete(chat);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (chatToDelete) {
+      onDeleteChat(chatToDelete.id);
+    }
+    setShowDeleteModal(false);
+    setChatToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setChatToDelete(null);
+  };
+
   const getModelIcon = (modelId) => {
     const model = getModelInfo(modelId);
     if (!model) return '🔮';
 
     switch (model.provider) {
       case 'Groq':
+        if (modelId === 'llama-3.3-70b-versatile') {
+          return '👑'; // Crown icon for Xanny Pro
+        }
         return '⚡';
       default:
         return '🔮';
     }
+  };
+
+  const getModelDisplayName = (modelId) => {
+    if (modelId === 'llama-3.3-70b-versatile') {
+      // Check if Xanny Pro is limited today
+      const today = new Date().toDateString();
+      const usage = localStorage.getItem(`xanny_pro_usage_${today}`);
+      const xannyProUsage = usage ? parseInt(usage) : 0;
+      const isLimited = xannyProUsage >= 20;
+
+      return (
+        <span className="flex items-center gap-1">
+          <span className="text-yellow-400">👑</span>
+          <span>Xanny Pro</span>
+          <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-1 py-0.5 rounded-full font-bold">PRO</span>
+          {isLimited && <span className="text-xs text-red-400">(Limited)</span>}
+        </span>
+      );
+    } else if (modelId === 'llama-3.1-8b-instant') {
+      return (
+        <span className="flex items-center gap-1">
+          <span className="text-blue-400">⚡</span>
+          <span>Xanny</span>
+        </span>
+      );
+    }
+
+    const model = getModelInfo(modelId);
+    return model?.name || 'Unknown';
   };
 
   const MenuIcon = () => (
@@ -339,9 +391,7 @@ const ChatSidebar = ({ isOpen, onToggle, chats, currentChatId, onChatSelect, onN
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm('Delete this chat?')) {
-                                onDeleteChat(chat.id);
-                              }
+                              handleDeleteClick(chat);
                             }}
                             className="text-gray-400 hover:text-red-400 p-1"
                           >
@@ -351,10 +401,7 @@ const ChatSidebar = ({ isOpen, onToggle, chats, currentChatId, onChatSelect, onN
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          {getModelIcon(chat.modelId)}
-                          {getModelInfo(chat.modelId)?.name || 'Unknown'}
-                        </span>
+                        <span className="flex items-center gap-1">{getModelDisplayName(chat.modelId)}</span>
                         <span>{chat.messages.length} messages</span>
                       </div>
 
@@ -374,6 +421,51 @@ const ChatSidebar = ({ isOpen, onToggle, chats, currentChatId, onChatSelect, onN
           </div>
         </div>
       </div>
+
+      {/* Delete Chat Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Delete Chat</h3>
+            </div>
+
+            <p className="text-gray-300 mb-6 leading-relaxed">
+              Are you sure you want to delete <span className="text-white font-semibold">"{chatToDelete?.title}"</span>? This action cannot be undone.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelDelete}
+                className="flex-1 px-4 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all duration-200 border border-gray-600/50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-xl font-medium transition-all duration-200 border border-red-500/30 hover:border-red-400/50"
+              >
+                Delete Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
