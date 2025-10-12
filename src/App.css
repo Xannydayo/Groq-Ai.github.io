@@ -126,8 +126,47 @@ button:focus {
   color: #888;
 }
 
+/* Professional animations */
+.slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Enhanced glassmorphism */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
 /* Mobile-specific improvements */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   /* Ensure text doesn't overflow on mobile */
   * {
     word-wrap: break-word;
@@ -162,6 +201,35 @@ button:focus {
   /* Fixed input bar mobile optimization */
   .fixed-input-bar {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Mobile header adjustments */
+  .mobile-header {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Mobile chat bubbles */
+  .mobile-chat-bubble {
+    max-width: 90%;
+  }
+
+  /* Mobile input adjustments */
+  .mobile-input {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .tablet-adjustments {
+    max-width: 90%;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1440px) {
+  .large-screen {
+    max-width: 1200px;
   }
 }
 
